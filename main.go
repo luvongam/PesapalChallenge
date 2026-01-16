@@ -15,6 +15,10 @@ func main() {
 
 	// REPL mode
 	db := NewDatabase()
+	err := db.Load()
+	if err != nil {
+		return
+	}
 	scanner := bufio.NewScanner(os.Stdin)
 
 	fmt.Println("SimpleDB RDBMS v1.0")

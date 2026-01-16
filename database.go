@@ -3,10 +3,13 @@ package main
 import (
 	"fmt"
 	"strings"
+	"sync"
 )
 
 type Database struct {
-	tables map[string]*Table
+	tables      map[string]*Table
+	mu          sync.RWMutex
+	persistence *PersistenceManager
 }
 
 type QueryResult struct {
@@ -17,8 +20,17 @@ type QueryResult struct {
 
 func NewDatabase() *Database {
 	return &Database{
-		tables: make(map[string]*Table),
+		tables:      make(map[string]*Table),
+		persistence: NewPersistenceManager("minidb.json"),
 	}
+}
+
+func (db *Database) Load() error {
+	return db.persistence.Load(db)
+}
+
+func (db *Database) Save() error {
+	return db.persistence.Save(db)
 }
 
 func (db *Database) Execute(query string) (*QueryResult, error) {
@@ -44,15 +56,25 @@ func (db *Database) Execute(query string) (*QueryResult, error) {
 }
 
 func (db *Database) executeCreate(stmt *CreateTableStmt) (*QueryResult, error) {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+
 	if _, exists := db.tables[stmt.Name]; exists {
 		return nil, fmt.Errorf("table %s already exists", stmt.Name)
 	}
 
 	db.tables[stmt.Name] = NewTable(stmt.Name, stmt.Columns)
+	err := db.Save()
+	if err != nil {
+		return nil, err
+	}
 	return &QueryResult{Message: fmt.Sprintf("Table %s created", stmt.Name)}, nil
 }
 
 func (db *Database) executeInsert(stmt *InsertStmt) (*QueryResult, error) {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+
 	table, exists := db.tables[stmt.Table]
 	if !exists {
 		return nil, fmt.Errorf("table %s does not exist", stmt.Table)
@@ -62,10 +84,17 @@ func (db *Database) executeInsert(stmt *InsertStmt) (*QueryResult, error) {
 		return nil, err
 	}
 
+	err := db.Save()
+	if err != nil {
+		return nil, err
+	}
 	return &QueryResult{Message: "1 row inserted"}, nil
 }
 
 func (db *Database) executeSelect(stmt *SelectStmt) (*QueryResult, error) {
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+
 	table, exists := db.tables[stmt.Table]
 	if !exists {
 		return nil, fmt.Errorf("table %s does not exist", stmt.Table)
@@ -85,22 +114,36 @@ func (db *Database) executeSelect(stmt *SelectStmt) (*QueryResult, error) {
 }
 
 func (db *Database) executeUpdate(stmt *UpdateStmt) (*QueryResult, error) {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+
 	table, exists := db.tables[stmt.Table]
 	if !exists {
 		return nil, fmt.Errorf("table %s does not exist", stmt.Table)
 	}
 
 	count := table.Update(stmt.Updates, stmt.Where)
+	err := db.Save()
+	if err != nil {
+		return nil, err
+	}
 	return &QueryResult{Message: fmt.Sprintf("%d row(s) updated", count)}, nil
 }
 
 func (db *Database) executeDelete(stmt *DeleteStmt) (*QueryResult, error) {
+	db.mu.Lock()
+	defer db.mu.Unlock()
+
 	table, exists := db.tables[stmt.Table]
 	if !exists {
 		return nil, fmt.Errorf("table %s does not exist", stmt.Table)
 	}
 
 	count := table.Delete(stmt.Where)
+	err := db.Save()
+	if err != nil {
+		return nil, err
+	}
 	return &QueryResult{Message: fmt.Sprintf("%d row(s) deleted", count)}, nil
 }
 
