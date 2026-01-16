@@ -41,13 +41,17 @@ exit
 ```bash
 go run . server
 ```
-Open http://localhost:8080 for the Task Manager demo app.
+
+### Web Interfaces
+- `GET /` or `GET /console` - SQL Console (Interactive query interface)
+- `GET /tasks` - Task Manager Demo (CRUD application)
 
 ### API Endpoints
 - `GET /api/tasks` - List all tasks
-- `POST /api/tasks` - Create task
-- `PUT /api/tasks/{id}` - Update task
+- `POST /api/tasks` - Create task (JSON body: {id, title, description, status, priority})
+- `PUT /api/tasks/{id}` - Update task (JSON body: {status, ...})
 - `DELETE /api/tasks/{id}` - Delete task
+- `POST /api/query` - Execute SQL query (JSON body: {query})
 
 ## Architecture
 
