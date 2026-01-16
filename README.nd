@@ -1,0 +1,176 @@
+# SimpleDB - A Simple Relational Database Management System
+
+A from-scratch implementation of a simple RDBMS in Go with SQL-like syntax, featuring CRUD operations, indexing, constraints, and joins.
+
+## Features
+
+### Core Database Features
+- **Data Types**: INT, STRING, FLOAT
+- **Constraints**: PRIMARY KEY, UNIQUE, NOT NULL
+- **Indexing**: Automatic B-tree-style indexing on primary and unique keys
+- **Operations**: CREATE TABLE, INSERT, SELECT, UPDATE, DELETE
+- **Joins**: INNER JOIN support
+- **WHERE Clauses**: Support for =, !=, <, >, <=, >= operators
+
+### Architecture
+- **Parser**: Hand-written SQL parser with tokenization
+- **Storage Engine**: In-memory row-based storage with index support
+- **Query Optimizer**: Index-aware query execution (uses indexes when available)
+- **Concurrency**: Thread-safe operations with read-write mutexes
+
+## Usage
+
+### REPL Mode
+
+Run the interactive SQL shell:
+
+```bash
+go run *.go
+```
+
+Example session:
+```sql
+> CREATE TABLE users (id INT PRIMARY KEY, name STRING NOT NULL, age INT)
+Table users created
+
+> INSERT INTO users (id name age) VALUES (1 'Alice' 30)
+1 row inserted
+
+> INSERT INTO users (id name age) VALUES (2 'Bob' 25)
+1 row inserted
+
+> SELECT * FROM users WHERE age > 26
+id              | name            | age
+--------------------------------------------------
+1               | Alice           | 30
+
+2 row(s)
+
+> UPDATE users SET age = 31 WHERE id = 1
+1 row(s) updated
+
+> DELETE FROM users WHERE id = 2
+1 row(s) deleted
+```
+
+### Web Server Mode
+
+Run the demo web application:
+
+```bash
+go run *.go server
+```
+
+Then open http://localhost:8080 in your browser to see the Task Manager demo app.
+
+## Demo Application
+
+The included web app demonstrates all CRUD operations:
+- **Create**: Add new tasks with title, description, status, and priority
+- **Read**: View all tasks in a formatted list
+- **Update**: Change task status (pending → in-progress → completed)
+- **Delete**: Remove tasks from the database
+
+## SQL Syntax Examples
+
+### CREATE TABLE
+```sql
+CREATE TABLE products (
+    id INT PRIMARY KEY,
+    name STRING NOT NULL,
+    price FLOAT,
+    category STRING UNIQUE
+)
+```
+
+### INSERT
+```sql
+INSERT INTO products (id name price category) VALUES (1 'Laptop' 999.99 'Electronics')
+```
+
+### SELECT
+```sql
+SELECT * FROM products
+SELECT name price FROM products WHERE price > 500
+SELECT * FROM orders JOIN customers ON orders.customer_id = customers.id
+```
+
+### UPDATE
+```sql
+UPDATE products SET price = 899.99 WHERE id = 1
+```
+
+### DELETE
+```sql
+DELETE FROM products WHERE category = 'Electronics'
+```
+
+## Implementation Details
+
+### Indexing
+- Hash-based indexes automatically created for PRIMARY KEY and UNIQUE columns
+- Query optimizer uses indexes for equality lookups (WHERE col = value)
+- Reduces query time from O(n) to O(1) for indexed lookups
+
+### Storage
+- Row-oriented storage with columnar projections
+- In-memory storage with efficient map-based lookups
+- Index updates on INSERT, UPDATE, and DELETE operations
+
+### Parser
+- Hand-written tokenizer with quote handling
+- Recursive descent parsing for SQL statements
+- Type inference for numeric and string literals
+
+### Constraints
+- **PRIMARY KEY**: Enforces uniqueness and creates index
+- **UNIQUE**: Enforces uniqueness across column values
+- **NOT NULL**: Prevents null values in column
+
+### Joins
+- Nested loop join implementation
+- Supports table.column notation for disambiguating columns
+- Qualified column names in result set (table.column)
+
+## Project Structure
+
+```
+main.go         - Entry point and REPL
+database.go     - Database coordinator and query execution
+table.go        - Table storage, indexing, and operations
+parser.go       - SQL parser and tokenizer
+webserver.go    - HTTP server and demo web app
+```
+
+## Attribution
+
+This is an original implementation built from scratch to demonstrate:
+- Database systems fundamentals (storage, indexing, query processing)
+- Parser design and implementation
+- Concurrent data structure design
+- Web application integration
+
+No external database libraries were used - all core functionality is hand-implemented to showcase understanding of RDBMS internals.
+
+## Limitations
+
+This is an educational implementation with the following limitations:
+- In-memory only (no persistence)
+- Single-node (no distributed capabilities)
+- Limited SQL syntax support
+- Simple nested loop joins (no hash or merge joins)
+- No transaction support or ACID guarantees
+- No query optimization beyond index usage
+- Limited aggregate functions
+
+## Future Enhancements
+
+Potential improvements:
+- Disk-based storage with page management
+- Transaction support with MVCC
+- More join algorithms (hash join, sort-merge join)
+- Query optimization with cost-based planner
+- Aggregate functions (COUNT, SUM, AVG, etc.)
+- GROUP BY and HAVING clauses
+- Subqueries and CTEs
+- B+ tree indexes for range queries
